@@ -11,6 +11,7 @@ const workspaceInput = z.object({
   tasks: z.array(z.unknown()),
   subjects: z.array(z.unknown()),
   logs: z.array(z.unknown()),
+  streak: z.record(z.string(), z.unknown()),
 });
 
 export const appRouter = router({

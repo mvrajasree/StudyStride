@@ -74,7 +74,7 @@ export async function upsertStudyWorkspace(workspace: InsertStudyWorkspace) {
   if (!db) throw new Error("PostgreSQL is not configured");
   const result = await db.insert(studyWorkspaces).values(workspace).onConflictDoUpdate({
     target: studyWorkspaces.workspaceKey,
-    set: { profile: workspace.profile, tasks: workspace.tasks, subjects: workspace.subjects, logs: workspace.logs, updatedAt: new Date() },
+    set: { profile: workspace.profile, tasks: workspace.tasks, subjects: workspace.subjects, logs: workspace.logs, streak: workspace.streak, updatedAt: new Date() },
   }).returning();
   return result[0];
 }

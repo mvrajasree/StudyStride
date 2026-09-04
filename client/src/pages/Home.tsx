@@ -37,6 +37,11 @@ type Profile = {
   program: string;
   semester: string;
 };
+type Streak = {
+  current: number;
+  best: number;
+  lastCompletedDate?: string;
+};
 type Task = {
   id: string;
   title: string;
@@ -89,6 +94,7 @@ type Quiz = {
 
 const initialProfile: Profile = { name: "Rajasree", program: "BCA", semester: "5th sem" };
 const RAJASREE_WORKSPACE_KEY = "rajasree-bca-sem5";
+const initialStreak: Streak = { current: 0, best: 0 };
 
 const freshTasks: Task[] = [
   { id: "fresh-1", title: "Choose your first syllabus unit", detail: "Start with one small block", minutes: 25, tag: "Start here", category: "Semester", complete: false },
@@ -210,6 +216,7 @@ export default function Home() {
   const [tasks, setTasks] = useStoredState<Task[]>("studystride_tasks_rajasree", freshTasks);
   const [subjects, setSubjects] = useStoredState<Subject[]>("studystride_subjects_rajasree", semVSubjects);
   const [logs, setLogs] = useStoredState<StudyLog[]>("studystride_logs_rajasree", seedLogs);
+  const [streak, setStreak] = useStoredState<Streak>("studystride_streak_rajasree", initialStreak);
   const workspaceQuery = useMemo(() => ({ workspaceKey: RAJASREE_WORKSPACE_KEY }), []);
   const cloudWorkspace = trpc.study.get.useQuery(workspaceQuery, { retry: false });
   const saveWorkspace = trpc.study.save.useMutation();
@@ -240,22 +247,25 @@ export default function Home() {
       setTasks(remote.tasks as Task[]);
       setSubjects(remote.subjects as Subject[]);
       setLogs(remote.logs as StudyLog[]);
+      setStreak({ ...initialStreak, ...(remote.streak as Partial<Streak> | undefined) });
     }
     setCloudHydrated(true);
-  }, [cloudHydrated, cloudWorkspace.data, cloudWorkspace.isError, cloudWorkspace.isLoading, setLogs, setProfile, setSubjects, setTasks]);
+  }, [cloudHydrated, cloudWorkspace.data, cloudWorkspace.isError, cloudWorkspace.isLoading, setLogs, setProfile, setStreak, setSubjects, setTasks]);
 
   useEffect(() => {
     if (cloudWorkspace.isLoading || !cloudHydrated) return;
     const timer = window.setTimeout(() => {
-      saveWorkspace.mutate({ workspaceKey: RAJASREE_WORKSPACE_KEY, profile, tasks, subjects, logs });
+      saveWorkspace.mutate({ workspaceKey: RAJASREE_WORKSPACE_KEY, profile, tasks, subjects, logs, streak });
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [cloudHydrated, cloudWorkspace.isLoading, logs, profile, subjects, tasks]);
+  }, [cloudHydrated, cloudWorkspace.isLoading, logs, profile, streak, subjects, tasks]);
 
   const completedMinutes = useMemo(() => tasks.filter((task) => task.complete).reduce((total, task) => total + task.minutes, 0), [tasks]);
   const completedTasks = tasks.filter((task) => task.complete).length;
   const dateLabel = formatDate(new Date());
   const progressPercent = calculateProgressPercent(completedMinutes, 180);
+  const todayKey = new Date().toLocaleDateString("en-CA");
+  const streakCompletedToday = streak.lastCompletedDate === todayKey;
 
   const goTo = (view: View) => {
     setActiveView(view);
@@ -266,6 +276,16 @@ export default function Home() {
     setTasks((current) => current.map((task) => (task.id === id ? { ...task, complete: !task.complete } : task)));
     const task = tasks.find((item) => item.id === id);
     if (task && !task.complete) toast.success("Nice. That block is in the bank.");
+  };
+
+  const completeStreakDay = () => {
+    if (streakCompletedToday) return;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = yesterday.toLocaleDateString("en-CA");
+    const current = streak.lastCompletedDate === yesterdayKey ? streak.current + 1 : 1;
+    setStreak({ current, best: Math.max(streak.best, current), lastCompletedDate: todayKey });
+    toast.success(current === 1 ? "New streak started. One day is enough to return." : `${current}-day streak saved.`);
   };
 
   const startQuiz = (quiz: Quiz) => {
@@ -381,7 +401,7 @@ export default function Home() {
           <div className="page-shell">
             <AnimatePresence mode="wait">
               <motion.div key={activeView} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}>
-                {activeView === "today" && <TodayView profile={profile} tasks={tasks} completedMinutes={completedMinutes} completedTasks={completedTasks} progressPercent={progressPercent} dateLabel={dateLabel} toggleTask={toggleTask} openRecovery={() => setRecoveryOpen(true)} goTo={goTo} />}
+                {activeView === "today" && <TodayView profile={profile} streak={streak} streakCompletedToday={streakCompletedToday} completeStreakDay={completeStreakDay} tasks={tasks} completedMinutes={completedMinutes} completedTasks={completedTasks} progressPercent={progressPercent} dateLabel={dateLabel} toggleTask={toggleTask} openRecovery={() => setRecoveryOpen(true)} goTo={goTo} />}
                 {activeView === "log" && <StudyLogView logs={logs} subjects={subjects} onLog={() => setLogOpen(true)} />}
                 {activeView === "semester" && <SemesterView profile={profile} subjects={subjects} onAdd={() => setAddSubjectOpen(true)} onLoadSemV={loadSemV} onToggleUnit={toggleSyllabusUnit} />}
                 {activeView === "gate" && <GateView goTo={goTo} />}
@@ -426,11 +446,11 @@ function StudyLogView({ logs, subjects, onLog }: { logs: StudyLog[]; subjects: S
   </>;
 }
 
-function TodayView({ profile, tasks, completedMinutes, completedTasks, progressPercent, dateLabel, toggleTask, openRecovery, goTo }: { profile: Profile; tasks: Task[]; completedMinutes: number; completedTasks: number; progressPercent: number; dateLabel: string; toggleTask: (id: string) => void; openRecovery: () => void; goTo: (view: View) => void }) {
+function TodayView({ profile, streak, streakCompletedToday, completeStreakDay, tasks, completedMinutes, completedTasks, progressPercent, dateLabel, toggleTask, openRecovery, goTo }: { profile: Profile; streak: Streak; streakCompletedToday: boolean; completeStreakDay: () => void; tasks: Task[]; completedMinutes: number; completedTasks: number; progressPercent: number; dateLabel: string; toggleTask: (id: string) => void; openRecovery: () => void; goTo: (view: View) => void }) {
   const todayDuration = formatDuration(completedMinutes);
   return <>
-    <section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> {dateLabel}</div><h1>Good afternoon, {profile.name}.</h1><p>Keep the chain alive, not perfect. Your next best step is already waiting.</p></div><div className="heading-actions"><button onClick={openRecovery} className="secondary-button"><RefreshCcw size={15} /> I missed a day</button><button onClick={() => goTo("quizzes")} className="secondary-button"><BrainCircuit size={15} /> Quick quiz</button></div></section>
-    <section className="stat-grid"><StatCard icon={<Clock3 size={18} />} label="Today logged" value={todayDuration} note="of 3h target" tone="purple" /><StatCard icon={<Flame size={18} />} label="Momentum" value="76%" note="+8% this week" tone="coral" /><StatCard icon={<CircleCheckBig size={18} />} label="Blocks done" value={`${completedTasks}/4`} note="2 still gentle" tone="green" /><StatCard icon={<Trophy size={18} />} label="Best streak" value="9 days" note="You can beat it" tone="gold" /></section>
+    <section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> {dateLabel}</div><h1>Good afternoon, {profile.name}.</h1><p>Keep the chain alive, not perfect. Your next best step is already waiting.</p></div><div className="heading-actions"><button onClick={completeStreakDay} disabled={streakCompletedToday} className="secondary-button"><Flame size={15} /> {streakCompletedToday ? "Today counted" : "Count today"}</button><button onClick={openRecovery} className="secondary-button"><RefreshCcw size={15} /> I missed a day</button><button onClick={() => goTo("quizzes")} className="secondary-button"><BrainCircuit size={15} /> Quick quiz</button></div></section>
+    <section className="stat-grid"><StatCard icon={<Clock3 size={18} />} label="Today logged" value={todayDuration} note="of 3h target" tone="purple" /><StatCard icon={<Flame size={18} />} label="Momentum" value="76%" note="+8% this week" tone="coral" /><StatCard icon={<CircleCheckBig size={18} />} label="Blocks done" value={`${completedTasks}/4`} note="2 still gentle" tone="green" /><StatCard icon={<Trophy size={18} />} label="Current streak" value={`${streak.current} day${streak.current === 1 ? "" : "s"}`} note={`Best: ${streak.best} days`} tone="gold" /></section>
     <section className="dashboard-grid mt-5"><div className="hero-card"><div className="hero-card-top"><div><div className="hero-label"><span className="pulse-dot" /> TODAY'S RHYTHM</div><h2>Progress survives<br /><em>imperfect days.</em></h2><p>Three focused hours is the target. Today only needs the next 25 minutes to count.</p></div><div className="hero-orbit"><div className="orbit-ring ring-one" /><div className="orbit-ring ring-two" /><div className="orbit-core"><Zap size={21} fill="currentColor" /><span>{Math.min(progressPercent, 100)}%</span></div></div></div><div className="hero-progress-row"><div className="hero-progress"><div className="hero-progress-fill" style={{ width: `${Math.min(progressPercent, 100)}%` }} /></div><span>{completedMinutes} / 180 min</span></div><div className="hero-bottom"><span><Sparkles size={14} /> Recovery-friendly plan active</span><button onClick={openRecovery} className="hero-link">See the fallback plan <ChevronRight size={15} /></button></div></div><WeekPulse /></section>
     <section className="content-grid mt-5"><div className="panel"><div className="panel-header"><div><div className="panel-kicker">YOUR NEXT BLOCKS</div><h3>Today’s focus</h3></div><button className="text-button">Edit plan <ChevronRight size={15} /></button></div><div className="task-list">{tasks.map((task) => <TaskRow key={task.id} task={task} onToggle={() => toggleTask(task.id)} />)}</div></div><div className="panel next-panel"><div className="panel-header"><div><div className="panel-kicker">UP NEXT</div><h3>One thing to remember</h3></div><NotebookPen size={19} className="muted-icon" /></div><div className="note-card"><div className="note-pin"><BookOpenCheck size={17} /></div><div><div className="note-title">Recall before you reread</div><p>Try to sketch the 3NF rules from memory before opening your notes. The tiny struggle is the learning.</p></div></div><div className="up-next-row"><div className="up-next-icon"><Target size={17} /></div><div className="flex-1"><div className="text-[13px] font-bold text-[#35395e]">GATE mock · Sunday</div><div className="mt-1 text-[11px] text-[#898ca8]">28 questions · 45 min planned</div></div><button onClick={() => goTo("gate")} className="round-arrow"><ChevronRight size={16} /></button></div><div className="quote-strip"><Sparkles size={15} /><span>“Consistency is a direction, not a streak.”</span></div></div></section>
   </>;

@@ -21,6 +21,7 @@ export const studyWorkspaces = pgTable("study_workspaces", {
   tasks: jsonb("tasks").notNull(),
   subjects: jsonb("subjects").notNull(),
   logs: jsonb("logs").notNull(),
+  streak: jsonb("streak").notNull().default({}),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -1,0 +1,1 @@
+ALTER TABLE "study_workspaces" ADD COLUMN "streak" jsonb DEFAULT '{}'::jsonb NOT NULL;
