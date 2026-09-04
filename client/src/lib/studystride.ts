@@ -33,3 +33,8 @@ export function filterLogsBySubject<T extends { subjectId: string }>(entries: T[
 export function parseSyllabus(text: string): string[] {
   return text.split("\n").map((unit) => unit.trim()).filter(Boolean);
 }
+
+export function mergeUniqueById<T extends { id: string }>(existing: T[], incoming: T[]): T[] {
+  const existingIds = new Set(existing.map((item) => item.id));
+  return [...existing, ...incoming.filter((item) => !existingIds.has(item.id))];
+}

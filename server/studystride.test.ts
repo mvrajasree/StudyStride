@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateProgressPercent, calculateQuizScore, filterLogsBySubject, formatDuration, parseSyllabus, recoveryPlan, sumStudyMinutes } from "../client/src/lib/studystride";
+import { calculateProgressPercent, calculateQuizScore, filterLogsBySubject, formatDuration, mergeUniqueById, parseSyllabus, recoveryPlan, sumStudyMinutes } from "../client/src/lib/studystride";
 
 describe("StudyStride progress helpers", () => {
   it("calculates a bounded-looking progress percentage without hiding over-target work", () => {
@@ -40,5 +40,13 @@ describe("StudyStride progress helpers", () => {
   it("parses optional syllabus text and supports a blank syllabus", () => {
     expect(parseSyllabus("Unit 1 — Basics\n\n Unit 2 — Practice ")).toEqual(["Unit 1 — Basics", "Unit 2 — Practice"]);
     expect(parseSyllabus("")).toEqual([]);
+  });
+
+  it("imports subjects without creating duplicates", () => {
+    expect(mergeUniqueById([{ id: "daa" }, { id: "iot" }], [{ id: "daa" }, { id: "csharp" }])).toEqual([
+      { id: "daa" },
+      { id: "iot" },
+      { id: "csharp" },
+    ]);
   });
 });
