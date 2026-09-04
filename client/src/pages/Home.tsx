@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { calculateProgressPercent, filterLogsBySubject, formatDuration, mergeUniqueById, parseSyllabus, sumStudyMinutes } from "@/lib/studystride";
+import { trpc } from "@/lib/trpc";
 
 type View = "today" | "semester" | "gate" | "quizzes" | "insights" | "log";
 type Profile = {
@@ -86,6 +87,7 @@ type Quiz = {
 };
 
 const initialProfile: Profile = { name: "Rajasree", program: "BCA", semester: "5th sem" };
+const RAJASREE_WORKSPACE_KEY = "rajasree-bca-sem5";
 
 const freshTasks: Task[] = [
   { id: "fresh-1", title: "Choose your first syllabus unit", detail: "Start with one small block", minutes: 25, tag: "Start here", category: "Semester", complete: false },
@@ -203,10 +205,14 @@ const navItems: { id: View; label: string; caption: string; icon: typeof LayoutD
 
 export default function Home() {
   const [activeView, setActiveView] = useState<View>("today");
-  const [profile] = useStoredState<Profile>("studystride_profile_rajasree", initialProfile);
+  const [profile, setProfile] = useStoredState<Profile>("studystride_profile_rajasree", initialProfile);
   const [tasks, setTasks] = useStoredState<Task[]>("studystride_tasks_rajasree", freshTasks);
   const [subjects, setSubjects] = useStoredState<Subject[]>("studystride_subjects_rajasree", semVSubjects);
   const [logs, setLogs] = useStoredState<StudyLog[]>("studystride_logs_rajasree", seedLogs);
+  const workspaceQuery = useMemo(() => ({ workspaceKey: RAJASREE_WORKSPACE_KEY }), []);
+  const cloudWorkspace = trpc.study.get.useQuery(workspaceQuery, { retry: false });
+  const saveWorkspace = trpc.study.save.useMutation();
+  const [cloudHydrated, setCloudHydrated] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [addSubjectOpen, setAddSubjectOpen] = useState(false);
@@ -224,6 +230,26 @@ export default function Home() {
   const [logSyllabusUnit, setLogSyllabusUnit] = useState("");
   const [logTrack, setLogTrack] = useState<StudyLog["track"]>("Semester");
   const [logReflection, setLogReflection] = useState("");
+
+  useEffect(() => {
+    if (cloudHydrated || cloudWorkspace.isLoading) return;
+    if (cloudWorkspace.data) {
+      const remote = cloudWorkspace.data;
+      setProfile(remote.profile as Profile);
+      setTasks(remote.tasks as Task[]);
+      setSubjects(remote.subjects as Subject[]);
+      setLogs(remote.logs as StudyLog[]);
+    }
+    setCloudHydrated(true);
+  }, [cloudHydrated, cloudWorkspace.data, cloudWorkspace.isError, cloudWorkspace.isLoading, setLogs, setProfile, setSubjects, setTasks]);
+
+  useEffect(() => {
+    if (cloudWorkspace.isLoading || !cloudHydrated) return;
+    const timer = window.setTimeout(() => {
+      saveWorkspace.mutate({ workspaceKey: RAJASREE_WORKSPACE_KEY, profile, tasks, subjects, logs });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [cloudHydrated, cloudWorkspace.isLoading, logs, profile, subjects, tasks]);
 
   const completedMinutes = useMemo(() => tasks.filter((task) => task.complete).reduce((total, task) => total + task.minutes, 0), [tasks]);
   const completedTasks = tasks.filter((task) => task.complete).length;
@@ -338,7 +364,7 @@ export default function Home() {
           <header className="topbar">
             <button className="mobile-menu" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={20} /></button>
             <div className="topbar-context"><span className="topbar-kicker">My learning cockpit</span><span className="topbar-slash">/</span><span>{navItems.find((item) => item.id === activeView)?.label}</span></div>
-            <div className="topbar-actions"><div className="saved-state"><span className="saved-dot" /> Saved locally</div><button className="icon-ghost"><CalendarDays size={17} /></button><button onClick={() => setLogOpen(true)} className="primary-button small"><Plus size={16} /> Log study</button></div>
+            <div className="topbar-actions"><div className="saved-state"><span className="saved-dot" /> {cloudWorkspace.isLoading ? "Loading PostgreSQL" : saveWorkspace.isPending ? "Syncing…" : saveWorkspace.isError ? "Offline backup" : "Saved to PostgreSQL"}</div><button className="icon-ghost"><CalendarDays size={17} /></button><button onClick={() => setLogOpen(true)} className="primary-button small"><Plus size={16} /> Log study</button></div>
           </header>
           <div className="page-shell">
             <AnimatePresence mode="wait">
