@@ -29,3 +29,7 @@ export function sumStudyMinutes(entries: { minutes: number }[]): number {
 export function filterLogsBySubject<T extends { subjectId: string }>(entries: T[], subjectId: string): T[] {
   return subjectId === "all" ? entries : entries.filter((entry) => entry.subjectId === subjectId);
 }
+
+export function parseSyllabus(text: string): string[] {
+  return text.split("\n").map((unit) => unit.trim()).filter(Boolean);
+}

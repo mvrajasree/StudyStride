@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateProgressPercent, calculateQuizScore, filterLogsBySubject, formatDuration, recoveryPlan, sumStudyMinutes } from "../client/src/lib/studystride";
+import { calculateProgressPercent, calculateQuizScore, filterLogsBySubject, formatDuration, parseSyllabus, recoveryPlan, sumStudyMinutes } from "../client/src/lib/studystride";
 
 describe("StudyStride progress helpers", () => {
   it("calculates a bounded-looking progress percentage without hiding over-target work", () => {
@@ -35,5 +35,10 @@ describe("StudyStride progress helpers", () => {
     expect(sumStudyMinutes(logs)).toBe(90);
     expect(filterLogsBySubject(logs, "os")).toHaveLength(2);
     expect(filterLogsBySubject(logs, "all")).toHaveLength(3);
+  });
+
+  it("parses optional syllabus text and supports a blank syllabus", () => {
+    expect(parseSyllabus("Unit 1 — Basics\n\n Unit 2 — Practice ")).toEqual(["Unit 1 — Basics", "Unit 2 — Practice"]);
+    expect(parseSyllabus("")).toEqual([]);
   });
 });
