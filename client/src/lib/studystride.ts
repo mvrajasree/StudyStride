@@ -21,3 +21,11 @@ export function recoveryPlan(skippedDays: number): { label: string; minutes: num
   if (skippedDays === 1) return [{ label: "One low-friction recall block", minutes: 25 }, { label: "Five practice questions", minutes: 20 }];
   return [{ label: "Rebuild the habit with one recall block", minutes: 20 }, { label: "Review the next smallest subtopic", minutes: 15 }];
 }
+
+export function sumStudyMinutes(entries: { minutes: number }[]): number {
+  return entries.reduce((total, entry) => total + Math.max(0, entry.minutes), 0);
+}
+
+export function filterLogsBySubject<T extends { subjectId: string }>(entries: T[], subjectId: string): T[] {
+  return subjectId === "all" ? entries : entries.filter((entry) => entry.subjectId === subjectId);
+}

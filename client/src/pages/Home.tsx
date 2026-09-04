@@ -28,9 +28,9 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import { calculateProgressPercent, formatDuration } from "@/lib/studystride";
+import { calculateProgressPercent, filterLogsBySubject, formatDuration, sumStudyMinutes } from "@/lib/studystride";
 
-type View = "today" | "semester" | "gate" | "quizzes" | "insights";
+type View = "today" | "semester" | "gate" | "quizzes" | "insights" | "log";
 type Task = {
   id: string;
   title: string;
@@ -50,6 +50,15 @@ type Subject = {
   hours: string;
   next: string;
   color: string;
+};
+type StudyLog = {
+  id: string;
+  subjectId: string;
+  title: string;
+  minutes: number;
+  track: "Semester" | "GATE prep" | "Habit";
+  reflection: string;
+  date: string;
 };
 type QuizQuestion = {
   prompt: string;
@@ -80,6 +89,13 @@ const seedSubjects: Subject[] = [
   { id: "s2", code: "CS404", name: "Operating Systems", professor: "Core semester subject", progress: 54, target: "Unit 3 of 5", hours: "14h logged", next: "Deadlocks recap · 35 min", color: "#ec6b4b" },
   { id: "s3", code: "CS406", name: "Database Management Systems", professor: "Core semester subject", progress: 41, target: "Unit 2 of 5", hours: "10.25h logged", next: "Normalization flashcards", color: "#26a67a" },
   { id: "s4", code: "HS401", name: "Professional Communication", professor: "Elective / seminar", progress: 82, target: "Unit 4 of 4", hours: "7.5h logged", next: "Submit reflection · Friday", color: "#d4a72c" },
+];
+
+const seedLogs: StudyLog[] = [
+  { id: "l1", subjectId: "s1", title: "Graph traversal patterns", minutes: 50, track: "Semester", reflection: "BFS vs DFS feels clearer after drawing the queue states.", date: "Today" },
+  { id: "l2", subjectId: "s2", title: "OS scheduling PYQs", minutes: 45, track: "GATE prep", reflection: "Need one more pass on response time calculations.", date: "Today" },
+  { id: "l3", subjectId: "s3", title: "Normal forms flashcards", minutes: 25, track: "Semester", reflection: "Recall was patchy; revisit functional dependencies tomorrow.", date: "Yesterday" },
+  { id: "l4", subjectId: "s4", title: "Seminar reflection outline", minutes: 35, track: "Semester", reflection: "Drafted the opening and added two examples.", date: "Sep 02" },
 ];
 
 const seedQuizzes: Quiz[] = [
@@ -159,6 +175,7 @@ const formatDate = (date: Date) =>
 
 const navItems: { id: View; label: string; caption: string; icon: typeof LayoutDashboard }[] = [
   { id: "today", label: "Today", caption: "Your next best step", icon: LayoutDashboard },
+  { id: "log", label: "Study log", caption: "Every block counts", icon: NotebookPen },
   { id: "semester", label: "Semester", caption: "Subjects & coverage", icon: GraduationCap },
   { id: "gate", label: "GATE prep", caption: "Exam runway", icon: Target },
   { id: "quizzes", label: "Quizzes", caption: "Practice recall", icon: BrainCircuit },
@@ -169,6 +186,7 @@ export default function Home() {
   const [activeView, setActiveView] = useState<View>("today");
   const [tasks, setTasks] = useStoredState<Task[]>("studystride_tasks", seedTasks);
   const [subjects, setSubjects] = useStoredState<Subject[]>("studystride_subjects", seedSubjects);
+  const [logs, setLogs] = useStoredState<StudyLog[]>("studystride_logs", seedLogs);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [addSubjectOpen, setAddSubjectOpen] = useState(false);
@@ -178,6 +196,11 @@ export default function Home() {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectCode, setNewSubjectCode] = useState("");
+  const [logTitle, setLogTitle] = useState("");
+  const [logMinutes, setLogMinutes] = useState("25");
+  const [logSubjectId, setLogSubjectId] = useState(seedSubjects[0].id);
+  const [logTrack, setLogTrack] = useState<StudyLog["track"]>("Semester");
+  const [logReflection, setLogReflection] = useState("");
 
   const completedMinutes = useMemo(() => tasks.filter((task) => task.complete).reduce((total, task) => total + task.minutes, 0), [tasks]);
   const completedTasks = tasks.filter((task) => task.complete).length;
@@ -231,6 +254,16 @@ export default function Home() {
     toast.success("Subject added to your semester board.");
   };
 
+  const saveStudyLog = () => {
+    if (!logTitle.trim()) return;
+    setLogs((current) => [{ id: `l-${Date.now()}`, subjectId: logSubjectId, title: logTitle.trim(), minutes: Number(logMinutes), track: logTrack, reflection: logReflection.trim() || "No reflection added.", date: "Today" }, ...current]);
+    setLogTitle("");
+    setLogMinutes("25");
+    setLogReflection("");
+    setLogOpen(false);
+    toast.success("Study block added to your semester log.");
+  };
+
   return (
     <div className="min-h-screen bg-[#f7f7fb] text-[#1f2340]">
       <div className="flex min-h-screen">
@@ -278,6 +311,7 @@ export default function Home() {
             <AnimatePresence mode="wait">
               <motion.div key={activeView} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}>
                 {activeView === "today" && <TodayView tasks={tasks} completedMinutes={completedMinutes} completedTasks={completedTasks} progressPercent={progressPercent} dateLabel={dateLabel} toggleTask={toggleTask} openRecovery={() => setRecoveryOpen(true)} goTo={goTo} />}
+                {activeView === "log" && <StudyLogView logs={logs} subjects={subjects} onLog={() => setLogOpen(true)} />}
                 {activeView === "semester" && <SemesterView subjects={subjects} onAdd={() => setAddSubjectOpen(true)} />}
                 {activeView === "gate" && <GateView goTo={goTo} />}
                 {activeView === "quizzes" && <QuizzesView quizzes={seedQuizzes} startQuiz={startQuiz} />}
@@ -295,7 +329,7 @@ export default function Home() {
           <button className="primary-button w-full justify-center" onClick={() => { setRecoveryOpen(false); toast.success("Recovery plan loaded for today."); }}>Load recovery plan <ChevronRight size={16} /></button>
         </Modal>}
         {logOpen && <Modal title="Log a study block" eyebrow="Capture the work, not just the intention." onClose={() => setLogOpen(false)}>
-          <div className="space-y-3"><label className="field-label">What did you work on?<input className="text-input" placeholder="e.g. Binary trees, Unit 3 notes" autoFocus /></label><div className="grid grid-cols-2 gap-3"><label className="field-label">Duration<select className="text-input"><option>25 min</option><option>45 min</option><option>60 min</option><option>90 min</option></select></label><label className="field-label">Track<select className="text-input"><option>Semester</option><option>GATE prep</option><option>Habit</option></select></label></div><label className="field-label">One-line reflection<textarea className="text-input min-h-[76px] resize-none" placeholder="What got clearer?" /></label></div><button className="primary-button mt-5 w-full justify-center" onClick={() => { setLogOpen(false); toast.success("Study block logged. Small steps compound."); }}>Save block <Check size={16} /></button>
+          <div className="space-y-3"><label className="field-label">What did you work on?<input value={logTitle} onChange={(event) => setLogTitle(event.target.value)} className="text-input" placeholder="e.g. Binary trees, Unit 3 notes" autoFocus /></label><div className="grid grid-cols-2 gap-3"><label className="field-label">Subject<select value={logSubjectId} onChange={(event) => setLogSubjectId(event.target.value)} className="text-input">{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.code} · {subject.name}</option>)}</select></label><label className="field-label">Duration<select value={logMinutes} onChange={(event) => setLogMinutes(event.target.value)} className="text-input"><option value="25">25 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min</option></select></label></div><label className="field-label">Track<select value={logTrack} onChange={(event) => setLogTrack(event.target.value as StudyLog["track"])} className="text-input"><option>Semester</option><option>GATE prep</option><option>Habit</option></select></label><label className="field-label">One-line reflection<textarea value={logReflection} onChange={(event) => setLogReflection(event.target.value)} className="text-input min-h-[76px] resize-none" placeholder="What got clearer?" /></label></div><button disabled={!logTitle.trim()} className="primary-button mt-5 w-full justify-center" onClick={saveStudyLog}>Save block <Check size={16} /></button>
         </Modal>}
         {addSubjectOpen && <Modal title="Add a semester subject" eyebrow="Make the board match your real semester." onClose={() => setAddSubjectOpen(false)}>
           <div className="space-y-3"><label className="field-label">Subject name<input value={newSubjectName} onChange={(event) => setNewSubjectName(event.target.value)} className="text-input" placeholder="e.g. Computer Networks" autoFocus /></label><label className="field-label">Course code <span className="font-normal text-[#a0a3b8]">(optional)</span><input value={newSubjectCode} onChange={(event) => setNewSubjectCode(event.target.value)} className="text-input" placeholder="CS408" /></label></div><button className="primary-button mt-5 w-full justify-center" onClick={addSubject}>Add subject <Plus size={16} /></button>
@@ -304,6 +338,21 @@ export default function Home() {
       </AnimatePresence>
     </div>
   );
+}
+
+function StudyLogView({ logs, subjects, onLog }: { logs: StudyLog[]; subjects: Subject[]; onLog: () => void }) {
+  const [filter, setFilter] = useState("all");
+  const filteredLogs = filterLogsBySubject(logs, filter);
+  const totalMinutes = sumStudyMinutes(filteredLogs);
+  const subjectName = (subjectId: string) => subjects.find((subject) => subject.id === subjectId)?.name ?? "Other study";
+  const subjectCode = (subjectId: string) => subjects.find((subject) => subject.id === subjectId)?.code ?? "—";
+  return <>
+    <section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line green-line" /> study log</div><h1>Every block counts.</h1><p>Keep a visible record of the work behind your progress. Filter by subject when you need proof that you are moving.</p></div><button onClick={onLog} className="primary-button"><Plus size={16} /> Log study</button></section>
+    <section className="log-summary"><div><div className="log-summary-icon purple"><Clock3 size={18} /></div><div><span>Total logged</span><strong>{formatDuration(totalMinutes)}</strong><small>{filter === "all" ? "across this semester" : "for this subject"}</small></div></div><div><div className="log-summary-icon coral"><BookOpenCheck size={18} /></div><div><span>Study blocks</span><strong>{filteredLogs.length}</strong><small>small wins recorded</small></div></div><div><div className="log-summary-icon green"><NotebookPen size={18} /></div><div><span>Reflections</span><strong>{filteredLogs.filter((log) => log.reflection && log.reflection !== "No reflection added.").length}</strong><small>notes worth revisiting</small></div></div></section>
+    <div className="log-toolbar"><div><div className="panel-kicker">RECENT BLOCKS</div><h2 className="section-title">Your semester trail</h2></div><div className="log-filters"><button onClick={() => setFilter("all")} className={`filter-chip ${filter === "all" ? "selected" : ""}`}>All subjects</button>{subjects.map((subject) => <button key={subject.id} onClick={() => setFilter(subject.id)} className={`filter-chip ${filter === subject.id ? "selected" : ""}`}>{subject.code}</button>)}</div></div>
+    <div className="log-list">{filteredLogs.length === 0 ? <div className="log-empty"><NotebookPen size={22} /><strong>No blocks for this subject yet.</strong><span>Log the next 25 minutes and start the trail.</span><button onClick={onLog} className="text-button">Add first block <ChevronRight size={14} /></button></div> : filteredLogs.map((log) => <div className="log-entry" key={log.id}><div className="log-entry-date">{log.date}</div><div className="log-entry-icon" style={{ background: `${subjects.find((subject) => subject.id === log.subjectId)?.color ?? "#6d5dfc"}18`, color: subjects.find((subject) => subject.id === log.subjectId)?.color ?? "#6d5dfc" }}><BookOpen size={18} /></div><div className="min-w-0 flex-1"><div className="log-entry-title">{log.title}</div><div className="log-entry-subject">{subjectCode(log.subjectId)} · {subjectName(log.subjectId)} <span>·</span> <span className={`track-inline ${log.track === "GATE prep" ? "gate" : ""}`}>{log.track}</span></div><p>{log.reflection}</p></div><div className="log-entry-time"><strong>{log.minutes}m</strong><span>focus block</span></div></div>)}</div>
+    <div className="bottom-note"><Sparkles size={16} /><span>Log the attempt even when the session felt messy. The trail is how you avoid starting from zero.</span></div>
+  </>;
 }
 
 function TodayView({ tasks, completedMinutes, completedTasks, progressPercent, dateLabel, toggleTask, openRecovery, goTo }: { tasks: Task[]; completedMinutes: number; completedTasks: number; progressPercent: number; dateLabel: string; toggleTask: (id: string) => void; openRecovery: () => void; goTo: (view: View) => void }) {

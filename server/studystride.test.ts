@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateProgressPercent, calculateQuizScore, formatDuration, recoveryPlan } from "../client/src/lib/studystride";
+import { calculateProgressPercent, calculateQuizScore, filterLogsBySubject, formatDuration, recoveryPlan, sumStudyMinutes } from "../client/src/lib/studystride";
 
 describe("StudyStride progress helpers", () => {
   it("calculates a bounded-looking progress percentage without hiding over-target work", () => {
@@ -28,5 +28,12 @@ describe("StudyStride progress helpers", () => {
       { label: "Rebuild the habit with one recall block", minutes: 20 },
       { label: "Review the next smallest subtopic", minutes: 15 },
     ]);
+  });
+
+  it("summarizes and filters subject-linked study blocks", () => {
+    const logs = [{ subjectId: "os", minutes: 45 }, { subjectId: "dbms", minutes: 25 }, { subjectId: "os", minutes: 20 }];
+    expect(sumStudyMinutes(logs)).toBe(90);
+    expect(filterLogsBySubject(logs, "os")).toHaveLength(2);
+    expect(filterLogsBySubject(logs, "all")).toHaveLength(3);
   });
 });
