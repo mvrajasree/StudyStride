@@ -50,3 +50,40 @@ export function toggleCompletedUnit(completedUnits: string[] = [], unit: string)
     ? completedUnits.filter((completedUnit) => completedUnit !== unit)
     : [...completedUnits, unit];
 }
+
+export type GeneratedQuizQuestion = {
+  prompt: string;
+  choices: string[];
+  answer: number;
+  explanation: string;
+};
+
+export function generateSyllabusQuestions(subjectName: string, units: string[], difficulty: "Warm-up" | "Core" | "Challenge", completedUnits: string[] = []): GeneratedQuizQuestion[] {
+  const available = units.filter((unit) => difficulty === "Challenge" || !completedUnits.includes(unit));
+  const topics = (available.length ? available : units).slice(0, 3);
+  if (!topics.length) return [];
+  return topics.map((unit, index) => {
+    if (difficulty === "Warm-up") {
+      return {
+        prompt: `Which topic belongs to ${subjectName}'s syllabus?`,
+        choices: [unit, "Unrelated current affairs", "A random hobby", "None of these"],
+        answer: 0,
+        explanation: `${unit} is one of the syllabus topics for ${subjectName}.`,
+      };
+    }
+    if (difficulty === "Core") {
+      return {
+        prompt: `What is the best first way to study “${unit}” in ${subjectName}?`,
+        choices: ["Explain the idea and solve a representative example", "Memorize only the topic title", "Skip examples and reread the index", "Wait until the exam to attempt it"],
+        answer: 0,
+        explanation: `Active explanation plus an example turns ${unit} into usable understanding.`,
+      };
+    }
+    return {
+      prompt: `You are given an unfamiliar problem related to “${unit}”. What shows the strongest ${subjectName} mastery?`,
+      choices: ["Compare trade-offs, justify an approach, and solve it", "Repeat a definition without applying it", "Choose the longest answer automatically", "Avoid the problem because it is unfamiliar"],
+      answer: 0,
+      explanation: `Challenge-level recall asks you to transfer the ideas from ${unit} to a new situation.`,
+    };
+  });
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateProgressPercent, calculateQuizScore, calculateSyllabusProgress, filterLogsBySubject, formatDuration, mergeUniqueById, parseSyllabus, recoveryPlan, sumStudyMinutes, toggleCompletedUnit } from "../client/src/lib/studystride";
+import { calculateProgressPercent, calculateQuizScore, calculateSyllabusProgress, filterLogsBySubject, formatDuration, generateSyllabusQuestions, mergeUniqueById, parseSyllabus, recoveryPlan, sumStudyMinutes, toggleCompletedUnit } from "../client/src/lib/studystride";
 
 describe("StudyStride progress helpers", () => {
   it("calculates a bounded-looking progress percentage without hiding over-target work", () => {
@@ -55,5 +55,16 @@ describe("StudyStride progress helpers", () => {
     expect(calculateSyllabusProgress(units, ["Unit 1", "Unit 3"])).toBe(50);
     expect(toggleCompletedUnit(["Unit 1"], "Unit 2")).toEqual(["Unit 1", "Unit 2"]);
     expect(toggleCompletedUnit(["Unit 1", "Unit 2"], "Unit 1")).toEqual(["Unit 2"]);
+  });
+
+  it("generates questions from syllabus units at each level", () => {
+    const units = ["Greedy methods", "Dynamic programming"];
+    const warmUp = generateSyllabusQuestions("Algorithms", units, "Warm-up");
+    const core = generateSyllabusQuestions("Algorithms", units, "Core", ["Greedy methods"]);
+    const challenge = generateSyllabusQuestions("Algorithms", units, "Challenge", units);
+    expect(warmUp[0]?.prompt).toContain("syllabus");
+    expect(core[0]?.prompt).toContain("Dynamic programming");
+    expect(challenge[0]?.prompt).toContain("mastery");
+    expect(warmUp[0]?.choices[warmUp[0].answer]).toBe("Greedy methods");
   });
 });
