@@ -31,6 +31,11 @@ import { toast } from "sonner";
 import { calculateProgressPercent, filterLogsBySubject, formatDuration, parseSyllabus, sumStudyMinutes } from "@/lib/studystride";
 
 type View = "today" | "semester" | "gate" | "quizzes" | "insights" | "log";
+type Profile = {
+  name: string;
+  program: string;
+  semester: string;
+};
 type Task = {
   id: string;
   title: string;
@@ -78,6 +83,8 @@ type Quiz = {
   attempts: number;
   color: string;
 };
+
+const initialProfile: Profile = { name: "Rajasree", program: "BCA", semester: "5th sem" };
 
 const seedTasks: Task[] = [
   { id: "t1", title: "Revise graph traversal patterns", detail: "Algorithms · 2 focus blocks", minutes: 50, tag: "Deep work", category: "Semester", complete: true },
@@ -194,8 +201,9 @@ const navItems: { id: View; label: string; caption: string; icon: typeof LayoutD
 
 export default function Home() {
   const [activeView, setActiveView] = useState<View>("today");
+  const [profile] = useStoredState<Profile>("studystride_profile", initialProfile);
   const [tasks, setTasks] = useStoredState<Task[]>("studystride_tasks", seedTasks);
-  const [subjects, setSubjects] = useStoredState<Subject[]>("studystride_subjects", seedSubjects);
+  const [subjects, setSubjects] = useStoredState<Subject[]>("studystride_subjects", semVSubjects);
   const [logs, setLogs] = useStoredState<StudyLog[]>("studystride_logs", seedLogs);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -213,6 +221,14 @@ export default function Home() {
   const [logSubjectId, setLogSubjectId] = useState(seedSubjects[0].id);
   const [logTrack, setLogTrack] = useState<StudyLog["track"]>("Semester");
   const [logReflection, setLogReflection] = useState("");
+
+  useEffect(() => {
+    setSubjects((current) => {
+      const existingIds = new Set(current.map((subject) => subject.id));
+      const missing = semVSubjects.filter((subject) => !existingIds.has(subject.id));
+      return missing.length ? [...current, ...missing] : current;
+    });
+  }, [setSubjects]);
 
   const completedMinutes = useMemo(() => tasks.filter((task) => task.complete).reduce((total, task) => total + task.minutes, 0), [tasks]);
   const completedTasks = tasks.filter((task) => task.complete).length;
@@ -318,8 +334,8 @@ export default function Home() {
               <button onClick={() => setRecoveryOpen(true)} className="mini-link">Reset</button>
             </div>
             <div className="profile-row">
-              <div className="avatar">A</div>
-              <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[#31365d]">Aarav Mehta</div><div className="truncate text-[11px] text-[#8a8ea8]">Computer Science · 4th sem</div></div>
+              <div className="avatar">{profile.name.charAt(0)}</div>
+              <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[#31365d]">{profile.name}</div><div className="truncate text-[11px] text-[#8a8ea8]">{profile.program} · {profile.semester}</div></div>
               <button className="icon-ghost" aria-label="Settings"><Settings2 size={16} /></button>
             </div>
           </div>
@@ -334,9 +350,9 @@ export default function Home() {
           <div className="page-shell">
             <AnimatePresence mode="wait">
               <motion.div key={activeView} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}>
-                {activeView === "today" && <TodayView tasks={tasks} completedMinutes={completedMinutes} completedTasks={completedTasks} progressPercent={progressPercent} dateLabel={dateLabel} toggleTask={toggleTask} openRecovery={() => setRecoveryOpen(true)} goTo={goTo} />}
+                {activeView === "today" && <TodayView profile={profile} tasks={tasks} completedMinutes={completedMinutes} completedTasks={completedTasks} progressPercent={progressPercent} dateLabel={dateLabel} toggleTask={toggleTask} openRecovery={() => setRecoveryOpen(true)} goTo={goTo} />}
                 {activeView === "log" && <StudyLogView logs={logs} subjects={subjects} onLog={() => setLogOpen(true)} />}
-                {activeView === "semester" && <SemesterView subjects={subjects} onAdd={() => setAddSubjectOpen(true)} onLoadSemV={loadSemV} />}
+                {activeView === "semester" && <SemesterView profile={profile} subjects={subjects} onAdd={() => setAddSubjectOpen(true)} onLoadSemV={loadSemV} />}
                 {activeView === "gate" && <GateView goTo={goTo} />}
                 {activeView === "quizzes" && <QuizzesView quizzes={seedQuizzes} startQuiz={startQuiz} />}
                 {activeView === "insights" && <InsightsView completedMinutes={completedMinutes} />}
@@ -379,10 +395,10 @@ function StudyLogView({ logs, subjects, onLog }: { logs: StudyLog[]; subjects: S
   </>;
 }
 
-function TodayView({ tasks, completedMinutes, completedTasks, progressPercent, dateLabel, toggleTask, openRecovery, goTo }: { tasks: Task[]; completedMinutes: number; completedTasks: number; progressPercent: number; dateLabel: string; toggleTask: (id: string) => void; openRecovery: () => void; goTo: (view: View) => void }) {
+function TodayView({ profile, tasks, completedMinutes, completedTasks, progressPercent, dateLabel, toggleTask, openRecovery, goTo }: { profile: Profile; tasks: Task[]; completedMinutes: number; completedTasks: number; progressPercent: number; dateLabel: string; toggleTask: (id: string) => void; openRecovery: () => void; goTo: (view: View) => void }) {
   const todayDuration = formatDuration(completedMinutes);
   return <>
-    <section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> {dateLabel}</div><h1>Good afternoon, Aarav.</h1><p>Keep the chain alive, not perfect. Your next best step is already waiting.</p></div><div className="heading-actions"><button onClick={openRecovery} className="secondary-button"><RefreshCcw size={15} /> I missed a day</button><button onClick={() => goTo("quizzes")} className="secondary-button"><BrainCircuit size={15} /> Quick quiz</button></div></section>
+    <section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> {dateLabel}</div><h1>Good afternoon, {profile.name}.</h1><p>Keep the chain alive, not perfect. Your next best step is already waiting.</p></div><div className="heading-actions"><button onClick={openRecovery} className="secondary-button"><RefreshCcw size={15} /> I missed a day</button><button onClick={() => goTo("quizzes")} className="secondary-button"><BrainCircuit size={15} /> Quick quiz</button></div></section>
     <section className="stat-grid"><StatCard icon={<Clock3 size={18} />} label="Today logged" value={todayDuration} note="of 3h target" tone="purple" /><StatCard icon={<Flame size={18} />} label="Momentum" value="76%" note="+8% this week" tone="coral" /><StatCard icon={<CircleCheckBig size={18} />} label="Blocks done" value={`${completedTasks}/4`} note="2 still gentle" tone="green" /><StatCard icon={<Trophy size={18} />} label="Best streak" value="9 days" note="You can beat it" tone="gold" /></section>
     <section className="dashboard-grid mt-5"><div className="hero-card"><div className="hero-card-top"><div><div className="hero-label"><span className="pulse-dot" /> TODAY'S RHYTHM</div><h2>Progress survives<br /><em>imperfect days.</em></h2><p>Three focused hours is the target. Today only needs the next 25 minutes to count.</p></div><div className="hero-orbit"><div className="orbit-ring ring-one" /><div className="orbit-ring ring-two" /><div className="orbit-core"><Zap size={21} fill="currentColor" /><span>{Math.min(progressPercent, 100)}%</span></div></div></div><div className="hero-progress-row"><div className="hero-progress"><div className="hero-progress-fill" style={{ width: `${Math.min(progressPercent, 100)}%` }} /></div><span>{completedMinutes} / 180 min</span></div><div className="hero-bottom"><span><Sparkles size={14} /> Recovery-friendly plan active</span><button onClick={openRecovery} className="hero-link">See the fallback plan <ChevronRight size={15} /></button></div></div><WeekPulse /></section>
     <section className="content-grid mt-5"><div className="panel"><div className="panel-header"><div><div className="panel-kicker">YOUR NEXT BLOCKS</div><h3>Today’s focus</h3></div><button className="text-button">Edit plan <ChevronRight size={15} /></button></div><div className="task-list">{tasks.map((task) => <TaskRow key={task.id} task={task} onToggle={() => toggleTask(task.id)} />)}</div></div><div className="panel next-panel"><div className="panel-header"><div><div className="panel-kicker">UP NEXT</div><h3>One thing to remember</h3></div><NotebookPen size={19} className="muted-icon" /></div><div className="note-card"><div className="note-pin"><BookOpenCheck size={17} /></div><div><div className="note-title">Recall before you reread</div><p>Try to sketch the 3NF rules from memory before opening your notes. The tiny struggle is the learning.</p></div></div><div className="up-next-row"><div className="up-next-icon"><Target size={17} /></div><div className="flex-1"><div className="text-[13px] font-bold text-[#35395e]">GATE mock · Sunday</div><div className="mt-1 text-[11px] text-[#898ca8]">28 questions · 45 min planned</div></div><button onClick={() => goTo("gate")} className="round-arrow"><ChevronRight size={16} /></button></div><div className="quote-strip"><Sparkles size={15} /><span>“Consistency is a direction, not a streak.”</span></div></div></section>
@@ -395,7 +411,7 @@ function WeekPulse() { return <div className="panel week-panel"><div className="
 
 function TaskRow({ task, onToggle }: { task: Task; onToggle: () => void }) { return <div className={`task-row ${task.complete ? "complete" : ""}`}><button onClick={onToggle} className={`task-check ${task.complete ? "checked" : ""}`} aria-label={task.complete ? `Mark ${task.title} incomplete` : `Mark ${task.title} complete`}>{task.complete && <Check size={14} strokeWidth={3} />}</button><div className="min-w-0 flex-1"><div className="task-title">{task.title}</div><div className="task-detail">{task.detail}</div></div><span className={`task-tag ${task.category.toLowerCase()}`}>{task.tag}</span><div className="task-time"><Clock3 size={13} /> {task.minutes}m</div><button className="task-more" aria-label="Task options">···</button></div>; }
 
-function SemesterView({ subjects, onAdd, onLoadSemV }: { subjects: Subject[]; onAdd: () => void; onLoadSemV: () => void }) { return <><section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> semester cockpit</div><h1>Make every unit visible.</h1><p>A calm overview of what is moving, what is next, and where a small review will unlock the most.</p></div><div className="heading-actions"><button onClick={onLoadSemV} className="secondary-button"><BookOpen size={15} /> Load SEM-V syllabus</button><button onClick={onAdd} className="primary-button"><Plus size={16} /> Add subject</button></div></section><div className="semester-banner"><div className="semester-banner-icon"><GraduationCap size={22} /></div><div className="flex-1"><div className="banner-kicker">B.TECH COMPUTER SCIENCE · SEMESTER V</div><div className="banner-title">Set up the semester once.</div><div className="banner-copy">Import DAA, IoT, C#, Blockchain and Industrial Sociology from your syllabus, or add a blank subject and fill it later.</div></div><div className="semester-score"><span>Subjects tracked</span><strong>{subjects.length}</strong><div className="score-bar"><div style={{ width: `${Math.min(100, subjects.length * 20)}%` }} /></div></div></div><div className="section-row"><div><div className="panel-kicker">SUBJECT BOARD</div><h2 className="section-title">Your semester</h2></div><div className="filter-chip"><span className="chip-dot" /> {subjects.length} active subjects</div></div><div className="subject-grid">{subjects.map((subject) => <SubjectCard subject={subject} key={subject.id} />)}</div><div className="bottom-note"><Sparkles size={16} /><span>Tip: a syllabus is optional. A subject with no units can still collect study blocks until you are ready to map it.</span></div></>; }
+function SemesterView({ profile, subjects, onAdd, onLoadSemV }: { profile: Profile; subjects: Subject[]; onAdd: () => void; onLoadSemV: () => void }) { return <><section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> semester cockpit</div><h1>Make every unit visible.</h1><p>{profile.name} · {profile.program} · {profile.semester}. A calm overview of what is moving, what is next, and where a small review will unlock the most.</p></div><div className="heading-actions"><button onClick={onLoadSemV} className="secondary-button"><BookOpen size={15} /> Load SEM-V syllabus</button><button onClick={onAdd} className="primary-button"><Plus size={16} /> Add subject</button></div></section><div className="semester-banner"><div className="semester-banner-icon"><GraduationCap size={22} /></div><div className="flex-1"><div className="banner-kicker">{profile.program.toUpperCase()} · {profile.semester.toUpperCase()}</div><div className="banner-title">Set up the semester once.</div><div className="banner-copy">Import DAA, IoT, C#, Blockchain and Industrial Sociology from your syllabus, or add a blank subject and fill it later.</div></div><div className="semester-score"><span>Subjects tracked</span><strong>{subjects.length}</strong><div className="score-bar"><div style={{ width: `${Math.min(100, subjects.length * 20)}%` }} /></div></div></div><div className="section-row"><div><div className="panel-kicker">SUBJECT BOARD</div><h2 className="section-title">Your semester</h2></div><div className="filter-chip"><span className="chip-dot" /> {subjects.length} active subjects</div></div><div className="subject-grid">{subjects.map((subject) => <SubjectCard subject={subject} key={subject.id} />)}</div><div className="bottom-note"><Sparkles size={16} /><span>Tip: a syllabus is optional. A subject with no units can still collect study blocks until you are ready to map it.</span></div></>; }
 
 function SubjectCard({ subject }: { subject: Subject }) { return <div className="subject-card"><div className="subject-card-accent" style={{ background: subject.color }} /><div className="subject-top"><div><span className="subject-code">{subject.code}</span><h3>{subject.name}</h3><p>{subject.professor}</p></div><div className="subject-percent" style={{ color: subject.color }}>{subject.progress}%</div></div><div className="subject-progress"><div style={{ width: `${subject.progress}%`, background: subject.color }} /></div><div className="subject-meta"><span>{subject.target}</span><span>{subject.hours}</span></div>{subject.hasSyllabus && subject.syllabus?.length ? <div className="syllabus-preview"><span className="syllabus-badge"><BookOpenCheck size={12} /> {subject.syllabus.length} units</span><span className="syllabus-first">{subject.syllabus[0]}</span></div> : <div className="syllabus-preview blank"><span className="syllabus-badge blank-badge">No syllabus yet</span><span className="syllabus-first">Add units whenever you are ready</span></div>}<div className="subject-next"><div><span className="next-label">NEXT UP</span><span className="next-value">{subject.next}</span></div><button className="round-arrow"><ChevronRight size={16} /></button></div></div>; }
 
