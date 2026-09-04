@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateProgressPercent, calculateQuizScore, filterLogsBySubject, formatDuration, mergeUniqueById, parseSyllabus, recoveryPlan, sumStudyMinutes } from "../client/src/lib/studystride";
+import { calculateProgressPercent, calculateQuizScore, calculateSyllabusProgress, filterLogsBySubject, formatDuration, mergeUniqueById, parseSyllabus, recoveryPlan, sumStudyMinutes, toggleCompletedUnit } from "../client/src/lib/studystride";
 
 describe("StudyStride progress helpers", () => {
   it("calculates a bounded-looking progress percentage without hiding over-target work", () => {
@@ -48,5 +48,12 @@ describe("StudyStride progress helpers", () => {
       { id: "iot" },
       { id: "csharp" },
     ]);
+  });
+
+  it("calculates and toggles syllabus unit completion", () => {
+    const units = ["Unit 1", "Unit 2", "Unit 3", "Unit 4"];
+    expect(calculateSyllabusProgress(units, ["Unit 1", "Unit 3"])).toBe(50);
+    expect(toggleCompletedUnit(["Unit 1"], "Unit 2")).toEqual(["Unit 1", "Unit 2"]);
+    expect(toggleCompletedUnit(["Unit 1", "Unit 2"], "Unit 1")).toEqual(["Unit 2"]);
   });
 });

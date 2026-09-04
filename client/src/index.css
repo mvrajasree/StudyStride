@@ -166,3 +166,14 @@
 .syllabus-hint svg { color: #8b84e8; }
 .log-entry-unit { display: inline-flex; align-items: center; gap: 5px; color: #6257d8; background: #f0efff; border-radius: 5px; padding: 4px 6px; margin-top: 7px; font-size: 9px; font-weight: 750; }
 .log-entry-unit svg { flex: 0 0 auto; }
+
+.syllabus-section { border-top: 1px solid #f0f0f5; margin-top: 13px; padding-top: 11px; }
+.syllabus-section-heading { display: flex; align-items: center; justify-content: space-between; color: #6257d8; font-size: 10px; font-weight: 800; }
+.syllabus-section-heading span { display: inline-flex; align-items: center; gap: 5px; }
+.syllabus-section-heading small { color: #9da0b4; font-size: 9px; font-weight: 700; }
+.syllabus-unit-list { display: grid; gap: 4px; margin-top: 8px; }
+.syllabus-unit-row { display: flex; align-items: flex-start; gap: 7px; width: 100%; padding: 5px 4px; border-radius: 6px; color: #6f738f; font-size: 10px; line-height: 1.35; text-align: left; transition: background 160ms ease, color 160ms ease; }
+.syllabus-unit-row:hover { background: #f7f6ff; color: #5149b8; }
+.syllabus-unit-row.completed { color: #878ba1; text-decoration: line-through; }
+.syllabus-unit-check { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 16px; height: 16px; margin-top: -1px; border: 1px solid #d6d7e4; border-radius: 5px; color: white; background: white; }
+.syllabus-unit-row.completed .syllabus-unit-check { border-color: #6d5dfc; background: #6d5dfc; }

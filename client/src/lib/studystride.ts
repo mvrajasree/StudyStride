@@ -38,3 +38,15 @@ export function mergeUniqueById<T extends { id: string }>(existing: T[], incomin
   const existingIds = new Set(existing.map((item) => item.id));
   return [...existing, ...incoming.filter((item) => !existingIds.has(item.id))];
 }
+
+export function calculateSyllabusProgress(units: string[] = [], completedUnits: string[] = []): number {
+  if (units.length === 0) return 0;
+  const completed = units.filter((unit) => completedUnits.includes(unit)).length;
+  return Math.round((completed / units.length) * 100);
+}
+
+export function toggleCompletedUnit(completedUnits: string[] = [], unit: string): string[] {
+  return completedUnits.includes(unit)
+    ? completedUnits.filter((completedUnit) => completedUnit !== unit)
+    : [...completedUnits, unit];
+}

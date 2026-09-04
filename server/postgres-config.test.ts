@@ -24,5 +24,7 @@ describe("PostgreSQL configuration", () => {
     expect((workspace?.profile as { name?: string }).name).toBe("Rajasree");
     expect(workspace?.subjects).toHaveLength(5);
     expect(workspace?.logs).toHaveLength(0);
+    const daa = (workspace?.subjects as Array<{ id: string; completedUnits?: string[] }>).find((subject) => subject.id === "semv-daa");
+    expect(daa?.completedUnits).toContain("Introduction and asymptotic analysis");
   });
 });
