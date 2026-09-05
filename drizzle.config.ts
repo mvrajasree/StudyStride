@@ -1,8 +1,8 @@
 import { defineConfig } from "drizzle-kit";
 
-const connectionString = process.env.POSTGRES_DATABASE_URL ?? process.env.DATABASE_URL;
+const connectionString = process.env.POSTGRES_DATABASE_URL;
 if (!connectionString?.startsWith("postgres://") && !connectionString?.startsWith("postgresql://")) {
-  throw new Error("A PostgreSQL connection string is required to run drizzle commands");
+  throw new Error("POSTGRES_DATABASE_URL must be set to a PostgreSQL connection string to run drizzle commands");
 }
 
 export default defineConfig({

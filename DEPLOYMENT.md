@@ -51,7 +51,7 @@ If you want cross-device synchronization, you can connect a free PostgreSQL data
 In your Vercel Project dashboard:
 1. Go to **Settings** → **Environment Variables**.
 2. Add:
-   - **Key**: `DATABASE_URL`
+   - **Key**: `POSTGRES_DATABASE_URL`
    - **Value**: Your connection string (e.g. `postgresql://user:password@ep-xyz.us-east-2.aws.neon.tech/neondb?sslmode=require`)
 3. Redeploy your project.
 
@@ -59,7 +59,7 @@ In your Vercel Project dashboard:
 To create the database tables in your cloud database, run from your local terminal with your connection string:
 
 ```bash
-DATABASE_URL="postgresql://user:password@host/db?sslmode=require" npm run db:push
+POSTGRES_DATABASE_URL="postgresql://user:password@host/db?sslmode=require" pnpm db:push
 ```
 
 ---

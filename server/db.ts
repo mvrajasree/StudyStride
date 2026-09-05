@@ -10,8 +10,6 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export function getPostgresConnectionString() {
   const projectUrl = process.env.POSTGRES_DATABASE_URL;
   if (projectUrl?.startsWith("postgres://") || projectUrl?.startsWith("postgresql://")) return projectUrl;
-  const builtInUrl = process.env.DATABASE_URL;
-  if (builtInUrl?.startsWith("postgres://") || builtInUrl?.startsWith("postgresql://")) return builtInUrl;
   return undefined;
 }
 

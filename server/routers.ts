@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
 import { authError, createLocalSession, hashPassword, verifyPassword } from "./auth";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -44,7 +43,8 @@ export const appRouter = router({
     }),
     login: publicProcedure.input(credentialsInput).mutation(async ({ ctx, input }) => {
       const user = await getUserByEmail(input.email);
-      if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) authError("Email or password is incorrect.");
+      if (!user || !user.passwordHash) authError("Email or password is incorrect.");
+      if (!(await verifyPassword(input.password, user.passwordHash))) authError("Email or password is incorrect.");
       setAuthCookie(ctx, await createLocalSession(user.openId, user.name ?? user.email ?? "StudyStride learner"));
       return safeUser(user);
     }),
