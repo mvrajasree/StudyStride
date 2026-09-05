@@ -25,6 +25,12 @@ export function getDb() {
       idleTimeoutMillis: 30_000,
       ssl: connectionString.includes("sslmode=require") ? { rejectUnauthorized: false } : undefined,
     });
+    // Without this, a dropped idle connection (routine with Neon/Supabase/
+    // Vercel Postgres) emits an unhandled 'error' on the pool and crashes
+    // the whole serverless process, taking down every in-flight request.
+    _pool.on("error", (err) => {
+      console.error("[Database] Idle client error (connection recycled):", err.message);
+    });
     _db = drizzle(_pool);
   }
   return _db;
