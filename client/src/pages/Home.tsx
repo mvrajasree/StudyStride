@@ -15,7 +15,6 @@ import {
   GraduationCap,
   LayoutDashboard,
   ListChecks,
-  LogOut,
   Menu,
   NotebookPen,
   Play,
@@ -28,7 +27,6 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { calculateProgressPercent, calculateSyllabusProgress, filterLogsBySubject, formatDuration, generateSyllabusQuestions, mergeUniqueById, parseSyllabus, sumStudyMinutes, toggleCompletedUnit } from "@/lib/studystride";
 import { trpc } from "@/lib/trpc";
 
@@ -212,9 +210,8 @@ const navItems: { id: View; label: string; caption: string; icon: typeof LayoutD
 ];
 
 export default function Home() {
-  const { user, logout } = useAuth();
-  const accountKey = user?.openId ?? "anonymous";
-  const accountProfile = useMemo(() => ({ ...initialProfile, name: user?.name || initialProfile.name }), [user?.name]);
+  const accountKey = "anonymous";
+  const accountProfile = initialProfile;
   const [activeView, setActiveView] = useState<View>("today");
   const [profile, setProfile] = useStoredState<Profile>(`studystride_profile_${accountKey}`, accountProfile);
   const [tasks, setTasks] = useStoredState<Task[]>(`studystride_tasks_${accountKey}`, freshTasks);
@@ -409,7 +406,6 @@ export default function Home() {
             <div className="profile-row">
               <div className="avatar">{profile.name.charAt(0)}</div>
               <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[#31365d]">{profile.name}</div><div className="truncate text-[11px] text-[#8a8ea8]">{profile.program} · {profile.semester}</div></div>
-              <button className="icon-ghost" onClick={() => void logout()} aria-label="Log out" title="Log out"><LogOut size={16} /></button>
             </div>
           </div>
         </aside>

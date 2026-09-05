@@ -5,7 +5,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { authError, createLocalSession, hashPassword, verifyPassword } from "./auth";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router } from "./_core/trpc";
 import { createLocalUser, getStudyWorkspace, getUserByEmail, upsertStudyWorkspace } from "./db";
 
 const workspaceInput = z.object({
@@ -55,14 +55,8 @@ export const appRouter = router({
     }),
   }),
   study: router({
-    get: protectedProcedure.input(z.object({ workspaceKey: z.string().min(1).max(128) })).query(({ ctx, input }) => {
-      if (input.workspaceKey !== `studystride-${ctx.user.openId}`) throw new TRPCError({ code: "FORBIDDEN", message: "Workspace access denied" });
-      return getStudyWorkspace(input.workspaceKey);
-    }),
-    save: protectedProcedure.input(workspaceInput).mutation(({ ctx, input }) => {
-      if (input.workspaceKey !== `studystride-${ctx.user.openId}`) throw new TRPCError({ code: "FORBIDDEN", message: "Workspace access denied" });
-      return upsertStudyWorkspace(input);
-    }),
+    get: publicProcedure.input(z.object({ workspaceKey: z.string().min(1).max(128) })).query(({ input }) => getStudyWorkspace(input.workspaceKey)),
+    save: publicProcedure.input(workspaceInput).mutation(({ input }) => upsertStudyWorkspace(input)),
   }),
 });
 
