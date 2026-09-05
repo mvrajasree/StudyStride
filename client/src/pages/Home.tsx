@@ -15,12 +15,12 @@ import {
   GraduationCap,
   LayoutDashboard,
   ListChecks,
+  LogOut,
   Menu,
   NotebookPen,
   Play,
   Plus,
   RefreshCcw,
-  Settings2,
   Sparkles,
   Target,
   Trophy,
@@ -28,6 +28,7 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { calculateProgressPercent, calculateSyllabusProgress, filterLogsBySubject, formatDuration, generateSyllabusQuestions, mergeUniqueById, parseSyllabus, sumStudyMinutes, toggleCompletedUnit } from "@/lib/studystride";
 import { trpc } from "@/lib/trpc";
 
@@ -211,13 +212,16 @@ const navItems: { id: View; label: string; caption: string; icon: typeof LayoutD
 ];
 
 export default function Home() {
+  const { user, logout } = useAuth();
+  const accountKey = user?.openId ?? "anonymous";
+  const accountProfile = useMemo(() => ({ ...initialProfile, name: user?.name || initialProfile.name }), [user?.name]);
   const [activeView, setActiveView] = useState<View>("today");
-  const [profile, setProfile] = useStoredState<Profile>("studystride_profile_rajasree", initialProfile);
-  const [tasks, setTasks] = useStoredState<Task[]>("studystride_tasks_rajasree", freshTasks);
-  const [subjects, setSubjects] = useStoredState<Subject[]>("studystride_subjects_rajasree", semVSubjects);
-  const [logs, setLogs] = useStoredState<StudyLog[]>("studystride_logs_rajasree", seedLogs);
-  const [streak, setStreak] = useStoredState<Streak>("studystride_streak_rajasree", initialStreak);
-  const workspaceQuery = useMemo(() => ({ workspaceKey: RAJASREE_WORKSPACE_KEY }), []);
+  const [profile, setProfile] = useStoredState<Profile>(`studystride_profile_${accountKey}`, accountProfile);
+  const [tasks, setTasks] = useStoredState<Task[]>(`studystride_tasks_${accountKey}`, freshTasks);
+  const [subjects, setSubjects] = useStoredState<Subject[]>(`studystride_subjects_${accountKey}`, semVSubjects);
+  const [logs, setLogs] = useStoredState<StudyLog[]>(`studystride_logs_${accountKey}`, seedLogs);
+  const [streak, setStreak] = useStoredState<Streak>(`studystride_streak_${accountKey}`, initialStreak);
+  const workspaceQuery = useMemo(() => ({ workspaceKey: `studystride-${accountKey}` }), [accountKey]);
   const cloudWorkspace = trpc.study.get.useQuery(workspaceQuery, { retry: false });
   const saveWorkspace = trpc.study.save.useMutation();
   const [cloudHydrated, setCloudHydrated] = useState(false);
@@ -255,10 +259,10 @@ export default function Home() {
   useEffect(() => {
     if (cloudWorkspace.isLoading || !cloudHydrated) return;
     const timer = window.setTimeout(() => {
-      saveWorkspace.mutate({ workspaceKey: RAJASREE_WORKSPACE_KEY, profile, tasks, subjects, logs, streak });
+      saveWorkspace.mutate({ workspaceKey: workspaceQuery.workspaceKey, profile, tasks, subjects, logs, streak });
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [cloudHydrated, cloudWorkspace.isLoading, logs, profile, streak, subjects, tasks]);
+  }, [cloudHydrated, cloudWorkspace.isLoading, logs, profile, streak, subjects, tasks, workspaceQuery.workspaceKey]);
 
   const completedMinutes = useMemo(() => tasks.filter((task) => task.complete).reduce((total, task) => total + task.minutes, 0), [tasks]);
   const completedTasks = tasks.filter((task) => task.complete).length;
@@ -405,7 +409,7 @@ export default function Home() {
             <div className="profile-row">
               <div className="avatar">{profile.name.charAt(0)}</div>
               <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[#31365d]">{profile.name}</div><div className="truncate text-[11px] text-[#8a8ea8]">{profile.program} · {profile.semester}</div></div>
-              <button className="icon-ghost" aria-label="Settings"><Settings2 size={16} /></button>
+              <button className="icon-ghost" onClick={() => void logout()} aria-label="Log out" title="Log out"><LogOut size={16} /></button>
             </div>
           </div>
         </aside>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { hashPassword, verifyPassword } from "./auth";
 import { calculateProgressPercent, calculateQuizScore, calculateSyllabusProgress, filterLogsBySubject, formatDuration, generateSyllabusQuestions, mergeUniqueById, parseSyllabus, recoveryPlan, sumStudyMinutes, toggleCompletedUnit } from "../client/src/lib/studystride";
 
 describe("StudyStride progress helpers", () => {
@@ -66,5 +67,12 @@ describe("StudyStride progress helpers", () => {
     expect(core[0]?.prompt).toContain("Dynamic programming");
     expect(challenge[0]?.prompt).toContain("mastery");
     expect(warmUp[0]?.choices[warmUp[0].answer]).toBe("Greedy methods");
+  });
+
+  it("hashes passwords and rejects incorrect credentials", async () => {
+    const hash = await hashPassword("studystride-password");
+    expect(hash).not.toContain("studystride-password");
+    expect(await verifyPassword("studystride-password", hash)).toBe(true);
+    expect(await verifyPassword("wrong-password", hash)).toBe(false);
   });
 });

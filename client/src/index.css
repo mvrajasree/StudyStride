@@ -203,3 +203,12 @@
 .auth-loading-mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; color: white; background: #6257db; animation: auth-pulse 1.5s ease-in-out infinite; }
 @keyframes auth-pulse { 0%, 100% { transform: scale(.96); opacity: .75; } 50% { transform: scale(1); opacity: 1; } }
 @media (max-width: 520px) { .auth-card { padding: 30px 24px 26px; border-radius: 22px; } .auth-kicker { margin-top: 38px; } }
+
+.auth-form { display: grid; gap: 13px; margin-top: 22px; }
+.auth-form .field-label { gap: 6px; }
+.auth-switch { margin-top: 18px; color: #8a8ea8; font-size: 12px; text-align: center; }
+.auth-switch button { margin-left: 5px; border: 0; padding: 0; color: #6257db; background: transparent; font-weight: 800; }
+.auth-switch button:hover { text-decoration: underline; }
+.auth-error { padding: 10px 12px; border: 1px solid #f3c3b5; border-radius: 9px; color: #a34f3a; background: #fff4f0; font-size: 12px; line-height: 1.4; }
+.auth-button:disabled { cursor: wait; opacity: .65; transform: none; }
+.auth-card .auth-benefits { margin: 20px 0 0; padding-top: 18px; border-top: 1px solid #f0eff7; }
